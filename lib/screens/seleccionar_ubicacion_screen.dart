@@ -19,6 +19,22 @@ class _SeleccionarUbicacionScreenState
     'Parque Central de Barranco',
   ];
 
+  // Posición del marcador según la ubicación seleccionada
+  Alignment get _posicionMarcador {
+    switch (_ubicaciones.indexOf(_ubicacion)) {
+      case 0:
+        return const Alignment(-0.55, -0.50);
+      case 1:
+        return const Alignment(0.55, -0.50);
+      case 2:
+        return const Alignment(-0.55, 0.45);
+      case 3:
+        return const Alignment(0.55, 0.45);
+      default:
+        return Alignment.center;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,12 +55,16 @@ class _SeleccionarUbicacionScreenState
                 fontWeight: FontWeight.bold,
               ),
             ),
+
             const SizedBox(height: 8),
+
             const Text(
               'Selecciona una ubicación de referencia en el mapa.',
             ),
+
             const SizedBox(height: 20),
 
+            // Mapa referencial
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -65,6 +85,7 @@ class _SeleccionarUbicacionScreenState
                         color: Colors.white,
                       ),
                     ),
+
                     Positioned(
                       left: 0,
                       right: 0,
@@ -74,6 +95,7 @@ class _SeleccionarUbicacionScreenState
                         color: Colors.white,
                       ),
                     ),
+
                     Positioned(
                       top: 0,
                       bottom: 0,
@@ -83,6 +105,7 @@ class _SeleccionarUbicacionScreenState
                         color: Colors.white,
                       ),
                     ),
+
                     Positioned(
                       top: 0,
                       bottom: 0,
@@ -92,11 +115,19 @@ class _SeleccionarUbicacionScreenState
                         color: Colors.white,
                       ),
                     ),
-                    const Icon(
-                      Icons.location_on,
-                      size: 55,
-                      color: Colors.red,
+
+                    // Marcador animado
+                    AnimatedAlign(
+                      alignment: _posicionMarcador,
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeInOut,
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 55,
+                        color: Colors.red,
+                      ),
                     ),
+
                     Positioned(
                       bottom: 15,
                       child: Container(
@@ -114,14 +145,17 @@ class _SeleccionarUbicacionScreenState
             ),
 
             const SizedBox(height: 18),
+
             const Text(
               'Selecciona una ubicación:',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
               ),
             ),
+
             const SizedBox(height: 8),
 
+            // Lista de ubicaciones
             DropdownButtonFormField<String>(
               initialValue: _ubicacion,
               isExpanded: true,
@@ -145,6 +179,8 @@ class _SeleccionarUbicacionScreenState
             ),
 
             const SizedBox(height: 18),
+
+            // Confirmar ubicación
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -157,6 +193,18 @@ class _SeleccionarUbicacionScreenState
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.all(16),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            const Center(
+              child: Text(
+                'Mapa referencial, no utiliza GPS.',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
                 ),
               ),
             ),

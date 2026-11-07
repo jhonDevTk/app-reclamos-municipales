@@ -23,6 +23,7 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
     super.dispose();
   }
 
+  // Abrir la ventana de selección de ubicación
   Future<void> _seleccionarUbicacion() async {
     final resultado = await Navigator.push<String>(
       context,
@@ -31,6 +32,8 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
       ),
     );
 
+    if (!mounted) return;
+
     if (resultado != null) {
       setState(() {
         _ubicacion = resultado;
@@ -38,14 +41,28 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
     }
   }
 
+  // Validar y registrar el reclamo
   void _registrarReclamo() {
-    if (_formKey.currentState!.validate()) {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_ubicacion == 'No seleccionada') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Reclamo registrado correctamente'),
+          content: Text(
+            'Debes seleccionar la ubicación del reclamo',
+          ),
         ),
       );
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Reclamo registrado correctamente'),
+      ),
+    );
   }
 
   @override
@@ -70,15 +87,19 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+
               const SizedBox(height: 20),
 
+              // Título del reclamo
               const Text('Título del reclamo'),
               const SizedBox(height: 8),
+
               TextFormField(
                 controller: _tituloController,
                 decoration: const InputDecoration(
                   hintText: 'Ej. Alumbrado público dañado',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.edit),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -87,15 +108,19 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
                   return null;
                 },
               ),
+
               const SizedBox(height: 18),
 
+              // Categoría del reclamo
               const Text('Categoría'),
               const SizedBox(height: 8),
+
               DropdownButtonFormField<String>(
                 initialValue: _categoria,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Selecciona una categoría',
+                  prefixIcon: Icon(Icons.category),
                 ),
                 items: [
                   'Alumbrado público',
@@ -122,16 +147,20 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
                   return null;
                 },
               ),
+
               const SizedBox(height: 18),
 
+              // Descripción del reclamo
               const Text('Descripción'),
               const SizedBox(height: 8),
+
               TextFormField(
                 controller: _descripcionController,
                 maxLines: 4,
                 decoration: const InputDecoration(
                   hintText: 'Describe el problema...',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.description),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -140,19 +169,33 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
                   return null;
                 },
               ),
+
               const SizedBox(height: 18),
 
+              // Selección de ubicación
               const Text('Ubicación del reclamo'),
               const SizedBox(height: 8),
+
               OutlinedButton.icon(
                 onPressed: _seleccionarUbicacion,
                 icon: const Icon(Icons.location_on),
-                label: const Text('Seleccionar ubicación en el mapa'),
+                label: const Text(
+                  'Seleccionar ubicación en el mapa',
+                ),
               ),
+
               const SizedBox(height: 8),
-              Text('Ubicación: $_ubicacion'),
+
+              Text(
+                'Ubicación: $_ubicacion',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
 
               const SizedBox(height: 28),
+
+              // Botón para registrar
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

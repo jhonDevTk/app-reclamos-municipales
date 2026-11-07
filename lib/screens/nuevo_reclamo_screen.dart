@@ -41,8 +41,8 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
     }
   }
 
-  // Validar y registrar el reclamo
-  void _registrarReclamo() {
+  // Validar y mostrar resumen del reclamo
+  Future<void> _registrarReclamo() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -58,9 +58,79 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
       return;
     }
 
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Confirmar reclamo'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Revisa los datos antes de confirmar:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 15),
+
+                const Text(
+                  'Título:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(_tituloController.text.trim()),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  'Categoría:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(_categoria ?? ''),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  'Descripción:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(_descripcionController.text.trim()),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  'Ubicación:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(_ubicacion),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Editar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Confirmar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || confirmar != true) {
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Reclamo registrado correctamente'),
+        content: Text('Reclamo confirmado correctamente'),
       ),
     );
   }

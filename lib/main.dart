@@ -50,7 +50,7 @@ class MenuPruebasScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: fondo,
       appBar: AppBar(
-        backgroundColor: azulBarra,
+        backgroundColor: const Color.fromARGB(255, 182, 24, 40),
         foregroundColor: Colors.white,
         elevation: 0,
         titleSpacing: 16,

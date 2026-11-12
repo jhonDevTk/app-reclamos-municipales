@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 // Importamos todas las ventanas ordenadas por nombres s1, s2...
 import 'screens/s1_login.dart';
 import 'screens/s2_registro.dart';
@@ -50,7 +49,7 @@ class MenuPruebasScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: fondo,
       appBar: AppBar(
-        backgroundColor: azulBarra,
+        backgroundColor: const Color.fromARGB(255, 219, 41, 85),
         foregroundColor: Colors.white,
         elevation: 0,
         titleSpacing: 16,

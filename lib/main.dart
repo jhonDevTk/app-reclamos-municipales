@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Importamos todas las ventanas ordenadas por nombres s1, s2...
 import 'screens/s1_login.dart';
@@ -12,7 +13,16 @@ import 'screens/s8_actualizar.dart';
 import 'screens/s9_notificaciones.dart';
 import 'screens/s10_perfil.dart';
 
-void main() {
+Future<void> main() async {
+  // Asegura que los bindings de Flutter estén listos antes de inicializar Supabase
+  WidgetsFlutterBinding.ensureInitialized();
+
+// Inicializamos la conexión con el proyecto de Supabase
+  await Supabase.initialize(
+    url: 'https://jjsayqplzsuvjvvitodh.supabase.co',
+    publishableKey: 'sb_publishable_gsTCj-lo3Ssf50bzeUmLEg_UkWhH4Q7',
+  );
+
   runApp(const AppMunicipal());
 }
 
@@ -44,8 +54,8 @@ class MenuPruebasScreen extends StatelessWidget {
   static const Color azulTexto = Color(0xFF101928);
   static const Color grisTexto = Color(0xFF575A61);
   static const Color colorIcono = Color(0xFF0B1A3A);
-  
-//este cambio lo hizo jhon
+
+  // este cambio lo hizo jhon
   @override
   Widget build(BuildContext context) {
     return Scaffold(

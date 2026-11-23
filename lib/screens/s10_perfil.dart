@@ -1,4 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 's3_nuevo_reclamo.dart';
+import 's4_mapa.dart';
+import 's5_lista_reclamos.dart';
+import 's6_filtros.dart';
+import 's7_detalles.dart';
+import 's8_actualizar.dart';
+import 's9_notificaciones.dart';
 
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
@@ -8,29 +17,41 @@ class PerfilScreen extends StatefulWidget {
 }
 
 class _PerfilScreenState extends State<PerfilScreen> {
-
   final Color azul = const Color(0xFF123D69);
 
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController nombreController =
-      TextEditingController(text: 'Juan Vecino');
-
-  final TextEditingController dniController =
-      TextEditingController(text: '12345678');
-
-  final TextEditingController correoController =
-      TextEditingController(text: 'juan.vecino@email.com');
-
-  final TextEditingController telefonoController =
-      TextEditingController(text: '999999999');
-
+  final TextEditingController nombreController = TextEditingController();
+  final TextEditingController dniController = TextEditingController();
+  final TextEditingController correoController = TextEditingController();
+  final TextEditingController telefonoController = TextEditingController();
   final TextEditingController direccionController =
       TextEditingController(text: 'San Juan de Lurigancho, Lima');
 
   bool notificacionesCorreo = true;
   bool alertasReclamos = true;
   bool alertasMunicipales = false;
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatosUsuario();
+  }
+
+  void _cargarDatosUsuario() {
+    final user = Supabase.instance.client.auth.currentUser;
+    final meta = user?.userMetadata ?? {};
+
+    nombreController.text =
+        (meta['nombre_completo'] ?? meta['full_name'] ?? '').toString();
+    dniController.text = (meta['dni'] ?? '').toString();
+    correoController.text = user?.email ?? '';
+    telefonoController.text = (meta['telefono'] ?? '').toString();
+    if ((meta['direccion'] ?? '').toString().isNotEmpty) {
+      direccionController.text = meta['direccion'].toString();
+    }
+  }
 
   @override
   void dispose() {
@@ -42,15 +63,49 @@ class _PerfilScreenState extends State<PerfilScreen> {
     super.dispose();
   }
 
-  void guardarDatos() {
-    if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Datos actualizados correctamente.'),
-        ),
+  Future<void> guardarDatos() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _guardando = true);
+
+    try {
+      final auth = Supabase.instance.client.auth;
+      final currentEmail = auth.currentUser?.email ?? '';
+      final nuevoCorreo = correoController.text.trim();
+
+      final attrs = UserAttributes(
+        email: nuevoCorreo.isNotEmpty && nuevoCorreo != currentEmail
+            ? nuevoCorreo
+            : null,
+        data: {
+          'nombre_completo': nombreController.text.trim(),
+          'dni': dniController.text.trim(),
+          'telefono': telefonoController.text.trim(),
+          'direccion': direccionController.text.trim(),
+        },
       );
 
+      await auth.updateUser(attrs);
+
+      if (!mounted) return;
       setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Datos actualizados en Supabase correctamente.'),
+        ),
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudieron guardar los datos.')),
+      );
+    } finally {
+      if (mounted) setState(() => _guardando = false);
     }
   }
 
@@ -63,15 +118,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
   }
 
   void cambiarContrasena() {
-    final nuevaContrasenaController =
-        TextEditingController();
+    final nuevaContrasenaController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Cambiar contraseña'),
-
           content: TextField(
             controller: nuevaContrasenaController,
             obscureText: true,
@@ -80,7 +133,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
               border: OutlineInputBorder(),
             ),
           ),
-
           actions: [
             TextButton(
               onPressed: () {
@@ -88,19 +140,27 @@ class _PerfilScreenState extends State<PerfilScreen> {
               },
               child: const Text('Cancelar'),
             ),
-
             ElevatedButton(
-              onPressed: () {
-                if (nuevaContrasenaController.text.length >= 6) {
+              onPressed: () async {
+                final nuevaClave = nuevaContrasenaController.text.trim();
+                if (nuevaClave.length >= 6) {
                   Navigator.pop(dialogContext);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Solicitud de cambio registrada en la demostración.',
+                  try {
+                    await Supabase.instance.client.auth.updateUser(
+                      UserAttributes(password: nuevaClave),
+                    );
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Contraseña actualizada en Supabase.'),
                       ),
-                    ),
-                  );
+                    );
+                  } on AuthException catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.message)),
+                    );
+                  }
                 }
               },
               child: const Text('Guardar'),
@@ -113,17 +173,52 @@ class _PerfilScreenState extends State<PerfilScreen> {
     });
   }
 
+  void _irAVentana(String ruta) {
+    Widget destino;
+    switch (ruta) {
+      case 's3':
+        destino = const NuevoReclamoScreen();
+        break;
+      case 's4':
+        destino = const MapaScreen();
+        break;
+      case 's5':
+        destino = const ListaReclamosScreen();
+        break;
+      case 's6':
+        destino = const FiltrosScreen();
+        break;
+      case 's7':
+        destino = const DetallesScreen();
+        break;
+      case 's8':
+        destino = const ActualizarScreen();
+        break;
+      case 's9':
+        destino = const NotificacionesScreen();
+        break;
+      default:
+        return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => destino),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final nombreMostrado = nombreController.text.trim().isEmpty
+        ? 'Vecino Municipal'
+        : nombreController.text.trim();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F8FA),
-
       appBar: AppBar(
         backgroundColor: azul,
         foregroundColor: Colors.white,
         centerTitle: true,
-        // Botón de retroceso para volver al menú anterior o principal
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -132,15 +227,28 @@ class _PerfilScreenState extends State<PerfilScreen> {
           'Certus Municipal',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            color: const Color(0xFFF0F8FA),
+            onSelected: _irAVentana,
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 's3', child: Text('3. Nuevo Reclamo')),
+              PopupMenuItem(value: 's4', child: Text('4. Mapa')),
+              PopupMenuItem(value: 's5', child: Text('5. Lista de Reclamos')),
+              PopupMenuItem(value: 's6', child: Text('6. Filtros')),
+              PopupMenuItem(value: 's7', child: Text('7. Detalles')),
+              PopupMenuItem(value: 's8', child: Text('8. Actualizar')),
+              PopupMenuItem(value: 's9', child: Text('9. Notificaciones')),
+            ],
+          ),
+        ],
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const Text(
               'Perfil de Usuario y Configuración',
               style: TextStyle(
@@ -149,46 +257,34 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 color: Color(0xFF123D69),
               ),
             ),
-
             const SizedBox(height: 8),
-
             const Text(
               'Administra tus datos personales y las preferencias de tu cuenta municipal.',
               style: TextStyle(color: Colors.black54),
             ),
-
             const SizedBox(height: 22),
 
             // INFORMACIÓN DEL USUARIO
-
             Card(
               elevation: 3,
               color: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
-
               child: Padding(
                 padding: const EdgeInsets.all(20),
-
                 child: Column(
                   children: [
-
                     CircleAvatar(
                       radius: 45,
                       backgroundColor: const Color(0xFFDCEFF5),
-
                       child: Text(
-                        nombreController.text.trim().isEmpty
-                            ? 'U'
-                            : nombreController.text
-                                .trim()
-                                .split(RegExp(r'\s+'))
-                                .take(2)
-                                .map((e) => e[0])
-                                .join()
-                                .toUpperCase(),
-
+                        nombreMostrado
+                            .split(RegExp(r'\s+'))
+                            .take(2)
+                            .map((e) => e.isNotEmpty ? e[0] : '')
+                            .join()
+                            .toUpperCase(),
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -196,39 +292,31 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
                     Text(
-                      nombreController.text,
+                      nombreMostrado,
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     const SizedBox(height: 5),
-
                     Text(
                       correoController.text,
                       style: const TextStyle(
                         color: Colors.black54,
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
                         vertical: 7,
                       ),
-
                       decoration: BoxDecoration(
                         color: const Color(0xFFE4F5F2),
                         borderRadius: BorderRadius.circular(25),
                       ),
-
                       child: const Text(
                         'CUENTA DE VECINO',
                         style: TextStyle(
@@ -246,21 +334,16 @@ class _PerfilScreenState extends State<PerfilScreen> {
             const SizedBox(height: 18),
 
             // DATOS PERSONALES
-
             Card(
               color: Colors.white,
               elevation: 2,
-
               child: Padding(
                 padding: const EdgeInsets.all(18),
-
                 child: Form(
                   key: _formKey,
-
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-
                       const Text(
                         'Datos personales',
                         style: TextStyle(
@@ -269,15 +352,12 @@ class _PerfilScreenState extends State<PerfilScreen> {
                           color: Color(0xFF123D69),
                         ),
                       ),
-
                       const SizedBox(height: 18),
-
                       campo(
                         'Nombres y apellidos',
                         nombreController,
                         Icons.person,
                       ),
-
                       campo(
                         'DNI',
                         dniController,
@@ -285,41 +365,41 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         teclado: TextInputType.number,
                         maxLength: 8,
                       ),
-
                       campo(
                         'Correo electrónico',
                         correoController,
                         Icons.email,
                         teclado: TextInputType.emailAddress,
                       ),
-
                       campo(
                         'Teléfono',
                         telefonoController,
                         Icons.phone,
                         teclado: TextInputType.phone,
                       ),
-
                       campo(
                         'Dirección',
                         direccionController,
                         Icons.location_on,
                       ),
-
                       const SizedBox(height: 12),
-
                       SizedBox(
                         width: double.infinity,
-
                         child: ElevatedButton.icon(
-                          onPressed: guardarDatos,
-
-                          icon: const Icon(Icons.save),
-
+                          onPressed: _guardando ? null : guardarDatos,
+                          icon: _guardando
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.save),
                           label: const Text(
                             'GUARDAR CAMBIOS',
                           ),
-
                           style: ElevatedButton.styleFrom(
                             backgroundColor: azul,
                             foregroundColor: Colors.white,
@@ -341,18 +421,14 @@ class _PerfilScreenState extends State<PerfilScreen> {
             const SizedBox(height: 18),
 
             // CONFIGURACIÓN
-
             Card(
               color: Colors.white,
               elevation: 2,
-
               child: Padding(
                 padding: const EdgeInsets.all(18),
-
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     const Text(
                       'Configuración de la cuenta',
                       style: TextStyle(
@@ -361,16 +437,12 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         color: Color(0xFF123D69),
                       ),
                     ),
-
                     const SizedBox(height: 8),
-
                     const Text(
                       'Personaliza cómo deseas recibir información.',
                       style: TextStyle(color: Colors.black54),
                     ),
-
                     const SizedBox(height: 12),
-
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       activeThumbColor: azul,
@@ -387,9 +459,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         });
                       },
                     ),
-
                     const Divider(),
-
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       activeThumbColor: azul,
@@ -406,9 +476,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         });
                       },
                     ),
-
                     const Divider(),
-
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       activeThumbColor: azul,
@@ -425,14 +493,11 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         });
                       },
                     ),
-
                     const SizedBox(height: 15),
-
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: guardarConfiguracion,
-
                         style: ElevatedButton.styleFrom(
                           backgroundColor: azul,
                           foregroundColor: Colors.white,
@@ -440,15 +505,12 @@ class _PerfilScreenState extends State<PerfilScreen> {
                             vertical: 15,
                           ),
                         ),
-
                         child: const Text(
                           'GUARDAR CONFIGURACIÓN',
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -487,30 +549,27 @@ class _PerfilScreenState extends State<PerfilScreen> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
-
       child: TextFormField(
         controller: controller,
         keyboardType: teclado,
         maxLength: maxLength,
-
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
             return 'Este campo es obligatorio';
           }
 
           if (titulo == 'DNI' &&
-              !RegExp(r'^[0-9]{8}$').hasMatch(value)) {
+              !RegExp(r'^[0-9]{8}$').hasMatch(value.trim())) {
             return 'El DNI debe tener 8 números';
           }
 
           if (titulo == 'Correo electrónico' &&
-              !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value)) {
+              !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value.trim())) {
             return 'Ingrese un correo válido';
           }
 
           return null;
         },
-
         decoration: InputDecoration(
           labelText: titulo,
           prefixIcon: Icon(

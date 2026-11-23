@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 's3_nuevo_reclamo.dart';
+import 's4_mapa.dart';
+import 's5_lista_reclamos.dart';
+import 's6_filtros.dart';
+import 's7_detalles.dart';
+import 's9_notificaciones.dart';
+import 's10_perfil.dart';
+
 // PANTALLA 8: Actualizar Estado del Reclamo
 class ActualizarScreen extends StatefulWidget {
   const ActualizarScreen({super.key});
@@ -22,6 +30,40 @@ class _ActualizarScreenState extends State<ActualizarScreen> {
     text: 'El técnico inspeccionó el poste; se requiere cambio de bombilla de repuesto.',
   );
 
+  void _irAVentana(String ruta) {
+    Widget destino;
+    switch (ruta) {
+      case 's3':
+        destino = const NuevoReclamoScreen();
+        break;
+      case 's4':
+        destino = const MapaScreen();
+        break;
+      case 's5':
+        destino = const ListaReclamosScreen();
+        break;
+      case 's6':
+        destino = const FiltrosScreen();
+        break;
+      case 's7':
+        destino = const DetallesScreen();
+        break;
+      case 's9':
+        destino = const NotificacionesScreen();
+        break;
+      case 's10':
+        destino = const PerfilScreen();
+        break;
+      default:
+        return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => destino),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,6 +78,22 @@ class _ActualizarScreenState extends State<ActualizarScreen> {
             Navigator.pop(context);
           },
         ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            color: const Color(0xFFF0F8FA),
+            onSelected: _irAVentana,
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 's3', child: Text('3. Nuevo Reclamo')),
+              PopupMenuItem(value: 's4', child: Text('4. Mapa')),
+              PopupMenuItem(value: 's5', child: Text('5. Lista de Reclamos')),
+              PopupMenuItem(value: 's6', child: Text('6. Filtros')),
+              PopupMenuItem(value: 's7', child: Text('7. Detalles')),
+              PopupMenuItem(value: 's9', child: Text('9. Notificaciones')),
+              PopupMenuItem(value: 's10', child: Text('10. Perfil')),
+            ],
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

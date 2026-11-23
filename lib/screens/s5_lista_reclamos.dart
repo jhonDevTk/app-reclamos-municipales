@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 's3_nuevo_reclamo.dart';
+import 's4_mapa.dart';
 import 's6_filtros.dart';
 import 's7_detalles.dart';
-
+import 's8_actualizar.dart';
+import 's9_notificaciones.dart';
+import 's10_perfil.dart';
 // PANTALLA 5: Lista de reclamos ("Mis Reclamos")
 class ListaReclamosScreen extends StatefulWidget {
   const ListaReclamosScreen({super.key});
@@ -18,6 +22,8 @@ class _ListaReclamosScreenState extends State<ListaReclamosScreen> {
   static const Color azulTexto = Color(0xFF101928);
   static const Color grisTexto = Color(0xFF575A61);
   static const Color colorIcono = Color(0xFF0B1A3A);
+
+  
 
   // Categoría seleccionada arriba
   String categoriaElegida = 'Todos';
@@ -69,6 +75,40 @@ class _ListaReclamosScreenState extends State<ListaReclamosScreen> {
       'estado': 'Cerrado',
     },
   ];
+
+ void _irAVentana(String ruta) {
+    Widget destino;
+    switch (ruta) {
+      case 's3':
+        destino = const NuevoReclamoScreen();
+        break;
+      case 's4':
+        destino = const MapaScreen();
+        break;
+      case 's6':
+        destino = const FiltrosScreen();
+        break;
+      case 's7':
+        destino = const DetallesScreen();
+        break;
+      case 's8':
+        destino = const ActualizarScreen();
+        break;
+      case 's9':
+        destino = const NotificacionesScreen();
+        break;
+      case 's10':
+        destino = const PerfilScreen();
+        break;
+      default:
+        return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => destino),
+    );
+  }
 
   // Icono de cada categoría
   Widget iconoCategoria(String categoria) {
@@ -275,7 +315,21 @@ class _ListaReclamosScreenState extends State<ListaReclamosScreen> {
               );
             },
           ),
-          const SizedBox(width: 8),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            color: fondo,
+            onSelected: _irAVentana,
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 's3', child: Text('3. Nuevo Reclamo')),
+              PopupMenuItem(value: 's4', child: Text('4. Mapa')),
+              PopupMenuItem(value: 's6', child: Text('6. Filtros')),
+              PopupMenuItem(value: 's7', child: Text('7. Detalles')),
+              PopupMenuItem(value: 's8', child: Text('8. Actualizar')),
+              PopupMenuItem(value: 's9', child: Text('9. Notificaciones')),
+              PopupMenuItem(value: 's10', child: Text('10. Perfil')),
+            ],
+          ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(

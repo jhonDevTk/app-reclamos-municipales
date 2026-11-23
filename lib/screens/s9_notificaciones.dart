@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 's3_nuevo_reclamo.dart';
+import 's4_mapa.dart';
+import 's5_lista_reclamos.dart';
+import 's6_filtros.dart';
+import 's7_detalles.dart';
+import 's8_actualizar.dart';
+import 's10_perfil.dart';
 
 class NotificacionesScreen extends StatefulWidget {
   const NotificacionesScreen({super.key});
@@ -13,51 +20,91 @@ class _NotificacionesScreenState
 
   final Color azul = const Color(0xFF123D69);
 
-  final List<Map<String, dynamic>> notificaciones = [
-    {
-      'titulo': 'Nuevo Reclamo Registrado',
-      'mensaje': 'Su reclamo #RM-20261025-01 ha sido asignado.',
-      'hora': 'Hace 5 min',
-      'icono': Icons.notifications,
-      'color': Colors.amber,
-      'leida': false,
-    },
-    {
-      'titulo': 'Alerta de Corte de Agua',
-      'mensaje': 'Mañana corte programado en SJL a las 8 AM.',
-      'hora': 'Hoy, 3:15 PM',
-      'icono': Icons.warning,
-      'color': Colors.red,
-      'leida': false,
-    },
-    {
-      'titulo': 'Actualización de Estado',
-      'mensaje': 'Reclamo #RM-20261025-01 ahora está En Proceso.',
-      'hora': 'Hoy, 3:15 PM',
-      'icono': Icons.info,
-      'color': Colors.blue,
-      'leida': false,
-    },
-    {
-      'titulo': 'Recordatorio Municipal',
-      'mensaje': 'Revisa los horarios de atención municipal.',
-      'hora': 'Hoy, 1:40 PM',
-      'icono': Icons.notifications,
-      'color': Colors.amber,
-      'leida': false,
-    },
-    {
-      'titulo': 'Servicio de Atención',
-      'mensaje': 'Tenemos canales digitales disponibles para consultas.',
-      'hora': 'Ayer',
-      'icono': Icons.info,
-      'color': Colors.blue,
-      'leida': true,
-    },
-  ];
+final List<Map<String, dynamic>> notificaciones = [
+  {
+    'titulo': 'Nuevo Reclamo Registrado',
+    'mensaje': 'Su reclamo #RM-20261025-01 ha sido asignado.',
+    'hora': 'Hace 5 min',
+    'icono': Icons.notifications,
+    'color': Colors.amber,
+    'leida': false,
+  },
+
+  {
+    'titulo': 'Alerta de Corte de Agua',
+    'mensaje': 'Mañana corte programado en SJL a las 8 AM.',
+    'hora': 'Hoy, 3:15 PM',
+    'icono': Icons.warning,
+    'color': Colors.red,
+    'leida': false,
+  },
+
+  {
+    'titulo': 'Actualización de Estado',
+    'mensaje': 'Reclamo #RM-20261025-01 ahora está En Proceso.',
+    'hora': 'Hoy, 3:15 PM',
+    'icono': Icons.info,
+    'color': Colors.blue,
+    'leida': false,
+  },
+
+  {
+    'titulo': 'Recordatorio Municipal',
+    'mensaje': 'Revisa los horarios de atención municipal.',
+    'hora': 'Hoy, 1:40 PM',
+    'icono': Icons.notifications,
+    'color': Colors.amber,
+    'leida': false,
+  },
+
+  {
+    'titulo': 'Servicio de Atención',
+    'mensaje': 'Tenemos canales digitales disponibles para consultas.',
+    'hora': 'Ayer',
+    'icono': Icons.info,
+    'color': Colors.blue,
+    'leida': true,
+  },
+];
+
+
 
   int get noLeidas =>
-      notificaciones.where((n) => !n['leida']).length;
+      notificaciones.where((n) => n['leida'] != true).length;
+
+  void _irAVentana(String ruta) {
+    Widget destino;
+    switch (ruta) {
+      case 's3':
+        destino = const NuevoReclamoScreen();
+        break;
+      case 's4':
+        destino = const MapaScreen();
+        break;
+      case 's5':
+        destino = const ListaReclamosScreen();
+        break;
+      case 's6':
+        destino = const FiltrosScreen();
+        break;
+      case 's7':
+        destino = const DetallesScreen();
+        break;
+      case 's8':
+        destino = const ActualizarScreen();
+        break;
+      case 's10':
+        destino = const PerfilScreen();
+        break;
+      default:
+        return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => destino),
+    );
+  }
 
   void marcarTodasLeidas() {
     setState(() {
@@ -98,6 +145,22 @@ class _NotificacionesScreenState
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            color: const Color(0xFFF0F8FA),
+            onSelected: _irAVentana,
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 's3', child: Text('3. Nuevo Reclamo')),
+              PopupMenuItem(value: 's4', child: Text('4. Mapa')),
+              PopupMenuItem(value: 's5', child: Text('5. Lista de Reclamos')),
+              PopupMenuItem(value: 's6', child: Text('6. Filtros')),
+              PopupMenuItem(value: 's7', child: Text('7. Detalles')),
+              PopupMenuItem(value: 's8', child: Text('8. Actualizar')),
+              PopupMenuItem(value: 's10', child: Text('10. Perfil')),
+            ],
+          ),
+        ],
       ),
 
       body: SingleChildScrollView(
@@ -286,14 +349,14 @@ class _NotificacionesScreenState
         padding: const EdgeInsets.all(12),
 
         decoration: BoxDecoration(
-          color: n['leida']
+          color: (n['leida'] == true)
               ? Colors.white
               : const Color(0xFFF3FBFC),
 
           borderRadius: BorderRadius.circular(14),
 
           border: Border.all(
-            color: n['leida']
+            color: (n['leida'] == true)
                 ? Colors.grey.shade200
                 : const Color(0xFF75D5D3),
           ),
@@ -325,7 +388,7 @@ class _NotificacionesScreenState
                 children: [
 
                   Text(
-                    n['titulo'],
+                    n['titulo'].toString(),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -335,7 +398,7 @@ class _NotificacionesScreenState
                   const SizedBox(height: 5),
 
                   Text(
-                    n['mensaje'],
+                    n['mensaje'].toString(),
                     style: const TextStyle(
                       fontSize: 13,
                       color: Colors.black87,
@@ -345,7 +408,7 @@ class _NotificacionesScreenState
                   const SizedBox(height: 5),
 
                   Text(
-                    n['hora'],
+                    n['hora'].toString(),
                     style: const TextStyle(
                       fontSize: 11,
                       color: Colors.grey,
@@ -355,7 +418,7 @@ class _NotificacionesScreenState
               ),
             ),
 
-            if (!n['leida'])
+           if (n['leida'] != true)
               const Icon(
                 Icons.circle,
                 size: 9,

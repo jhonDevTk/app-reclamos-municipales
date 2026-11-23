@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // PANTALLA 2: Crear cuenta (registro de nuevo usuario)
 class RegistroScreen extends StatefulWidget {
@@ -10,6 +11,14 @@ class RegistroScreen extends StatefulWidget {
 
 class _RegistroScreenState extends State<RegistroScreen> {
   bool ocultarClave = true;
+  bool _cargando = false;
+
+  // Controladores para capturar los datos de los campos
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _dniController = TextEditingController();
+  final TextEditingController _correoController = TextEditingController();
+  final TextEditingController _telefonoController = TextEditingController();
+  final TextEditingController _claveController = TextEditingController();
 
   // Colores sacados del diseño
   static const azulBoton = Color(0xFF113F73);
@@ -19,8 +28,68 @@ class _RegistroScreenState extends State<RegistroScreen> {
   static const iconoCampo = Color(0xFF5F6B76);
   static const bordeCampo = Color(0xFFC6CACB);
 
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _dniController.dispose();
+    _correoController.dispose();
+    _telefonoController.dispose();
+    _claveController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _registrarUsuario() async {
+    final correo = _correoController.text.trim();
+    final clave = _claveController.text.trim();
+
+    if (correo.isEmpty || clave.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa tu correo y contraseña')),
+      );
+      return;
+    }
+
+    setState(() => _cargando = true);
+
+    try {
+      await Supabase.instance.client.auth.signUp(
+        email: correo,
+        password: clave,
+        data: {
+          'nombre_completo': _nombreController.text.trim(),
+          'dni': _dniController.text.trim(),
+          'telefono': _telefonoController.text.trim(),
+        },
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cuenta registrada correctamente')),
+      );
+      Navigator.pop(context);
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ocurrió un error al registrar')),
+      );
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
   // Un campo de texto (caja blanca con borde redondeado)
-  Widget campo(IconData icono, String texto, {bool esClave = false}) {
+  Widget campo(
+    IconData icono,
+    String texto, {
+    TextEditingController? controller,
+    TextInputType? keyboardType,
+    bool esClave = false,
+  }) {
     return Container(
       height: 57,
       margin: const EdgeInsets.only(bottom: 12),
@@ -39,6 +108,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
+              controller: controller,
+              keyboardType: keyboardType,
               obscureText: esClave && ocultarClave,
               style: const TextStyle(fontSize: 16, color: textoCampo),
               decoration: InputDecoration.collapsed(
@@ -172,11 +243,35 @@ class _RegistroScreenState extends State<RegistroScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 23),
               child: Column(
                 children: [
-                  campo(Icons.person_outline, 'Nombres y Apellidos'),
-                  campo(Icons.badge_outlined, 'DNI (Documento de Identidad)'),
-                  campo(Icons.mail_outline, 'Correo electrónico'),
-                  campo(Icons.phone_outlined, 'Teléfono Celular'),
-                  campo(Icons.lock_outline, 'Contraseña', esClave: true),
+                  campo(
+                    Icons.person_outline,
+                    'Nombres y Apellidos',
+                    controller: _nombreController,
+                  ),
+                  campo(
+                    Icons.badge_outlined,
+                    'DNI (Documento de Identidad)',
+                    controller: _dniController,
+                    keyboardType: TextInputType.number,
+                  ),
+                  campo(
+                    Icons.mail_outline,
+                    'Correo electrónico',
+                    controller: _correoController,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  campo(
+                    Icons.phone_outlined,
+                    'Teléfono Celular',
+                    controller: _telefonoController,
+                    keyboardType: TextInputType.phone,
+                  ),
+                  campo(
+                    Icons.lock_outline,
+                    'Contraseña',
+                    controller: _claveController,
+                    esClave: true,
+                  ),
                   const SizedBox(height: 10),
 
                   SizedBox(
@@ -195,11 +290,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
                           letterSpacing: 0.5,
                         ),
                       ),
-                      onPressed: () {
-                        // Vuelve a la pantalla anterior al registrarse con éxito
-                        Navigator.pop(context);
-                      },
-                      child: const Text('REGISTRARSE'),
+                      onPressed: _cargando ? null : _registrarUsuario,
+                      child: _cargando
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text('REGISTRARSE'),
                     ),
                   ),
 

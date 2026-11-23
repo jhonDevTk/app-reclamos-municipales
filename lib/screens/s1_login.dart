@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-// Importamos la pantalla de registro por si el usuario hace clic en registrarse
+import 'package:supabase_flutter/supabase_flutter.dart';
+// Importamos la pantalla de registro y la de perfil
 import 's2_registro.dart';
-import 's5_lista_reclamos.dart';
+import 's10_perfil.dart';
 
 // PANTALLA 1: Iniciar sesión (Renombrada a LoginScreen para mantener el estándar del proyecto)
 class LoginScreen extends StatefulWidget {
@@ -13,6 +14,11 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool ocultarClave = true;
+  bool _cargando = false;
+
+  // Controladores para capturar correo y contraseña
+  final TextEditingController _correoController = TextEditingController();
+  final TextEditingController _claveController = TextEditingController();
 
   // Colores sacados del diseño original
   static const azulBoton = Color(0xFF113F73);
@@ -22,8 +28,65 @@ class _LoginScreenState extends State<LoginScreen> {
   static const iconoCampo = Color(0xFF5F6B76);
   static const bordeCampo = Color(0xFFC6CACB);
 
+  @override
+  void dispose() {
+    _correoController.dispose();
+    _claveController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _iniciarSesion() async {
+    final correo = _correoController.text.trim();
+    final clave = _claveController.text.trim();
+
+    if (correo.isEmpty || clave.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa tu correo y contraseña')),
+      );
+      return;
+    }
+
+    setState(() => _cargando = true);
+
+    try {
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: correo,
+        password: clave,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sesión iniciada correctamente')),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const PerfilScreen(),
+        ),
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ocurrió un error al iniciar sesión')),
+      );
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
   // Un campo de texto (caja blanca con borde redondeado)
-  Widget campo(IconData icono, String texto, {bool esClave = false}) {
+  Widget campo(
+    IconData icono,
+    String texto, {
+    TextEditingController? controller,
+    TextInputType? keyboardType,
+    bool esClave = false,
+  }) {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -41,6 +104,8 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
+              controller: controller,
+              keyboardType: keyboardType,
               obscureText: esClave && ocultarClave,
               style: const TextStyle(fontSize: 16, color: textoCampo),
               decoration: InputDecoration.collapsed(
@@ -73,12 +138,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Barra superior con opción de volver al menú de pruebas del Líder Técnico
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: azulTitulo,
         title: const Text('Municipalidad - Login', style: TextStyle(color: Colors.white)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context), // Vuelve al menú principal o anterior
-        ),
       ),
 
       // "¿No tienes cuenta?" en la parte inferior
@@ -183,9 +245,19 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 23),
               child: Column(
                 children: [
-                  campo(Icons.person_outline, 'Correo electrónico o Usuario'),
+                  campo(
+                    Icons.person_outline,
+                    'Correo electrónico o Usuario',
+                    controller: _correoController,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                   const SizedBox(height: 15),
-                  campo(Icons.lock_outline, 'Contraseña', esClave: true),
+                  campo(
+                    Icons.lock_outline,
+                    'Contraseña',
+                    controller: _claveController,
+                    esClave: true,
+                  ),
                   const SizedBox(height: 25),
 
                   // Botón INGRESAR
@@ -205,16 +277,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           letterSpacing: 0.5,
                         ),
                       ),
-                      onPressed: () {
-                        // Navega a la lista de reclamos (s5_lista_reclamos)
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ListaReclamosScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text('INGRESAR'),
+                      onPressed: _cargando ? null : _iniciarSesion,
+                      child: _cargando
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text('INGRESAR'),
                     ),
                   ),
 

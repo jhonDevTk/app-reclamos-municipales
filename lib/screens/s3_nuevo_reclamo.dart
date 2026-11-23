@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 's4_mapa.dart'; // Asegúrate de que apunte a tu pantalla de mapa correcta
+import 's5_lista_reclamos.dart';
+import 's6_filtros.dart';
+import 's7_detalles.dart';
+import 's8_actualizar.dart';
+import 's9_notificaciones.dart';
+import 's10_perfil.dart';
 
 class NuevoReclamoScreen extends StatefulWidget {
   const NuevoReclamoScreen({super.key});
@@ -21,6 +27,40 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
     _tituloController.dispose();
     _descripcionController.dispose();
     super.dispose();
+  }
+
+  void _irAVentana(String ruta) {
+    Widget destino;
+    switch (ruta) {
+      case 's4':
+        destino = const MapaScreen();
+        break;
+      case 's5':
+        destino = const ListaReclamosScreen();
+        break;
+      case 's6':
+        destino = const FiltrosScreen();
+        break;
+      case 's7':
+        destino = const DetallesScreen();
+        break;
+      case 's8':
+        destino = const ActualizarScreen();
+        break;
+      case 's9':
+        destino = const NotificacionesScreen();
+        break;
+      case 's10':
+        destino = const PerfilScreen();
+        break;
+      default:
+        return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => destino),
+    );
   }
 
   // Abrir la ventana de selección de ubicación
@@ -73,31 +113,24 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 15),
-
                 const Text(
                   'Título:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(_tituloController.text.trim()),
-
                 const SizedBox(height: 10),
-
                 const Text(
                   'Categoría:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(_categoria ?? ''),
-
                 const SizedBox(height: 10),
-
                 const Text(
                   'Descripción:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(_descripcionController.text.trim()),
-
                 const SizedBox(height: 10),
-
                 const Text(
                   'Ubicación:',
                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -142,11 +175,26 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
         title: const Text('Nuevo Reclamo', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF123D69),
         foregroundColor: Colors.white,
-        // Botón de retroceso añadido para volver al menú o pantalla anterior
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            color: const Color(0xFFF0F8FA),
+            onSelected: _irAVentana,
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 's4', child: Text('4. Mapa')),
+              PopupMenuItem(value: 's5', child: Text('5. Lista de Reclamos')),
+              PopupMenuItem(value: 's6', child: Text('6. Filtros')),
+              PopupMenuItem(value: 's7', child: Text('7. Detalles')),
+              PopupMenuItem(value: 's8', child: Text('8. Actualizar')),
+              PopupMenuItem(value: 's9', child: Text('9. Notificaciones')),
+              PopupMenuItem(value: 's10', child: Text('10. Perfil')),
+            ],
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -163,13 +211,9 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
                   color: Color(0xFF123D69),
                 ),
               ),
-
               const SizedBox(height: 20),
-
-              // Título del reclamo
               const Text('Título del reclamo', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-
               TextFormField(
                 controller: _tituloController,
                 decoration: const InputDecoration(
@@ -184,13 +228,9 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
                   return null;
                 },
               ),
-
               const SizedBox(height: 18),
-
-              // Categoría del reclamo
               const Text('Categoría', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-
               DropdownButtonFormField<String>(
                 initialValue: _categoria,
                 decoration: const InputDecoration(
@@ -223,13 +263,9 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
                   return null;
                 },
               ),
-
               const SizedBox(height: 18),
-
-              // Descripción del reclamo
               const Text('Descripción', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-
               TextFormField(
                 controller: _descripcionController,
                 maxLines: 4,
@@ -245,13 +281,9 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
                   return null;
                 },
               ),
-
               const SizedBox(height: 18),
-
-              // Selección de ubicación
               const Text('Ubicación del reclamo', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-
               OutlinedButton.icon(
                 onPressed: _seleccionarUbicacion,
                 icon: const Icon(Icons.location_on),
@@ -259,19 +291,14 @@ class _NuevoReclamoScreenState extends State<NuevoReclamoScreen> {
                   'Seleccionar ubicación en el mapa',
                 ),
               ),
-
               const SizedBox(height: 8),
-
               Text(
                 'Ubicación: $_ubicacion',
                 style: const TextStyle(
                   fontWeight: FontWeight.w500,
                 ),
               ),
-
               const SizedBox(height: 28),
-
-              // Botón para registrar
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

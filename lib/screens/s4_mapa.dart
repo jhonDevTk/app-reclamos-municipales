@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 's3_nuevo_reclamo.dart';
+import 's5_lista_reclamos.dart';
+import 's6_filtros.dart';
+import 's7_detalles.dart';
+import 's8_actualizar.dart';
+import 's9_notificaciones.dart';
+import 's10_perfil.dart';
+
 class MapaScreen extends StatefulWidget {
   const MapaScreen({super.key});
 
@@ -33,6 +41,40 @@ class _MapaScreenState extends State<MapaScreen> {
     }
   }
 
+  void _irAVentana(String ruta) {
+    Widget destino;
+    switch (ruta) {
+      case 's3':
+        destino = const NuevoReclamoScreen();
+        break;
+      case 's5':
+        destino = const ListaReclamosScreen();
+        break;
+      case 's6':
+        destino = const FiltrosScreen();
+        break;
+      case 's7':
+        destino = const DetallesScreen();
+        break;
+      case 's8':
+        destino = const ActualizarScreen();
+        break;
+      case 's9':
+        destino = const NotificacionesScreen();
+        break;
+      case 's10':
+        destino = const PerfilScreen();
+        break;
+      default:
+        return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => destino),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,6 +88,22 @@ class _MapaScreenState extends State<MapaScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            color: const Color(0xFFF0F8FA),
+            onSelected: _irAVentana,
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 's3', child: Text('3. Nuevo Reclamo')),
+              PopupMenuItem(value: 's5', child: Text('5. Lista de Reclamos')),
+              PopupMenuItem(value: 's6', child: Text('6. Filtros')),
+              PopupMenuItem(value: 's7', child: Text('7. Detalles')),
+              PopupMenuItem(value: 's8', child: Text('8. Actualizar')),
+              PopupMenuItem(value: 's9', child: Text('9. Notificaciones')),
+              PopupMenuItem(value: 's10', child: Text('10. Perfil')),
+            ],
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),

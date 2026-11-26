@@ -201,7 +201,7 @@ class _MapaScreenState extends State<MapaScreen> {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.2),
                               blurRadius: 4,
                             ),
                           ],
@@ -231,7 +231,7 @@ class _MapaScreenState extends State<MapaScreen> {
 
             // Lista de ubicaciones
             DropdownButtonFormField<String>(
-              value: _ubicacion,
+              initialValue: _ubicacion,
               isExpanded: true,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),

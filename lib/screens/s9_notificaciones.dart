@@ -369,7 +369,7 @@ final List<Map<String, dynamic>> notificaciones = [
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: (n['color'] as Color).withOpacity(0.15),
+                color: (n['color'] as Color).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(13),
               ),
 

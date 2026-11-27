@@ -10,12 +10,13 @@ import 's9_notificaciones.dart';
 import 's10_perfil.dart';
 
 // PANTALLA 8: Actualizar Estado del Reclamo (conectada a Supabase)
+// Usa la tabla "reclamos" que ya existe en Supabase.
 // - Si recibe un reclamoId (desde la ventana 7) actualiza ese reclamo.
 // - Si no recibe nada (por ejemplo, desde el menú), toma el reclamo más reciente.
 // Al guardar: cambia el estado en la tabla "reclamos" y deja un registro
 // en "historial_estados" con la observación.
 class ActualizarScreen extends StatefulWidget {
-  final int? reclamoId;
+  final Object? reclamoId;
 
   const ActualizarScreen({super.key, this.reclamoId});
 
@@ -26,18 +27,19 @@ class ActualizarScreen extends StatefulWidget {
 class _ActualizarScreenState extends State<ActualizarScreen> {
   final _supabase = Supabase.instance.client;
 
+  // Estados definidos en el modelo de datos del informe (tabla reclamos).
+  // Si en Supabase se guardan con otro texto, cambiar solo esta lista.
   final List<String> _estados = [
-    'Registrado',
-    'En Proceso',
-    'En Atención',
-    'Solucionado',
-    'Derivado',
+    'Pendiente',
+    'En proceso',
+    'Atendido',
+    'Rechazado',
   ];
 
   final TextEditingController _observacionesController = TextEditingController();
 
   Map<String, dynamic>? _reclamo;
-  String _estadoSeleccionado = 'En Proceso';
+  String _estadoSeleccionado = 'En proceso';
   bool _cargando = true;
   bool _guardando = false;
   String? _error;
@@ -70,19 +72,25 @@ class _ActualizarScreenState extends State<ActualizarScreen> {
             .eq('id', widget.reclamoId!)
             .maybeSingle();
       } else {
-        reclamo = await _supabase
-            .from('reclamos')
-            .select()
-            .order('created_at', ascending: false)
-            .limit(1)
-            .maybeSingle();
+        // Sin id: tomamos el reclamo más reciente
+        final filas = List<Map<String, dynamic>>.from(
+          await _supabase.from('reclamos').select(),
+        );
+        filas.sort((a, b) {
+          final fa = DateTime.tryParse('${a['fecha_registro'] ?? a['created_at']}') ?? DateTime(2000);
+          final fb = DateTime.tryParse('${b['fecha_registro'] ?? b['created_at']}') ?? DateTime(2000);
+          return fb.compareTo(fa);
+        });
+        reclamo = filas.isEmpty ? null : filas.first;
       }
 
       if (!mounted) return;
       setState(() {
         _reclamo = reclamo;
         final estadoActual = reclamo?['estado']?.toString();
-        if (estadoActual != null && _estados.contains(estadoActual)) {
+        if (estadoActual != null && estadoActual.isNotEmpty) {
+          // Si el estado guardado no está en la lista, lo agregamos
+          if (!_estados.contains(estadoActual)) _estados.insert(0, estadoActual);
           _estadoSeleccionado = estadoActual;
         }
         _cargando = false;
@@ -104,18 +112,26 @@ class _ActualizarScreenState extends State<ActualizarScreen> {
     final observacion = _observacionesController.text.trim();
 
     try {
-      // 1) Cambiar el estado del reclamo
-      await _supabase
+      // 1) Cambiar el estado del reclamo (.select() confirma que sí se guardó)
+      final actualizados = await _supabase
           .from('reclamos')
           .update({'estado': _estadoSeleccionado})
-          .eq('id', id);
+          .eq('id', id)
+          .select();
+      if (actualizados.isEmpty) {
+        throw Exception('Supabase no permitió actualizar el reclamo (revisar permisos RLS).');
+      }
 
-      // 2) Guardar el movimiento en el historial
-      await _supabase.from('historial_estados').insert({
-        'reclamo_id': id,
-        'estado': _estadoSeleccionado,
-        'observacion': observacion.isEmpty ? null : observacion,
-      });
+      // 2) Guardar el movimiento en el historial (opcional: si falla, el estado ya quedó guardado)
+      try {
+        await _supabase.from('historial_estados').insert({
+          'reclamo_id': id.toString(),
+          'estado': _estadoSeleccionado,
+          'observacion': observacion.isEmpty ? null : observacion,
+        });
+      } catch (e) {
+        debugPrint('No se guardó el historial: $e');
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -141,10 +157,15 @@ class _ActualizarScreenState extends State<ActualizarScreen> {
   // ---------- AYUDANTES ----------
   String _dosDigitos(int n) => n.toString().padLeft(2, '0');
 
+  // Usa codigo_reclamo si existe; si no, arma uno con la fecha y el id
   String _codigoReclamo(Map<String, dynamic> r) {
-    final f = DateTime.tryParse(r['created_at'].toString())?.toLocal() ?? DateTime.now();
+    final codigo = r['codigo_reclamo']?.toString();
+    if (codigo != null && codigo.isNotEmpty) return codigo;
+    final f = DateTime.tryParse('${r['fecha_registro'] ?? r['created_at']}')?.toLocal() ?? DateTime.now();
     final fecha = '${f.year}${_dosDigitos(f.month)}${_dosDigitos(f.day)}';
-    return '#RM-$fecha-${_dosDigitos(r['id'] as int)}';
+    final id = r['id'].toString();
+    final corto = id.length > 6 ? id.substring(0, 6).toUpperCase() : id.padLeft(2, '0');
+    return '#RM-$fecha-$corto';
   }
 
   // ---------- NAVEGACIÓN ----------
@@ -164,7 +185,7 @@ class _ActualizarScreenState extends State<ActualizarScreen> {
         destino = const FiltrosScreen();
         break;
       case 's7':
-        destino = DetallesScreen(reclamoId: _reclamo?['id'] as int?);
+        destino = DetallesScreen(reclamoId: _reclamo?['id']);
         break;
       case 's9':
         destino = const NotificacionesScreen();
@@ -301,12 +322,12 @@ class _ActualizarScreenState extends State<ActualizarScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    (r['direccion'] ?? 'Ubicación no indicada').toString(),
+                    (r['ubicacion_referencia'] ?? r['direccion'] ?? 'Ubicación no indicada').toString(),
                     style: const TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Estado actual: ${r['estado'] ?? 'Registrado'}',
+                    'Estado actual: ${r['estado'] ?? 'Pendiente'}',
                     style: const TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                 ],

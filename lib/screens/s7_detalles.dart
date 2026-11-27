@@ -10,10 +10,12 @@ import 's9_notificaciones.dart';
 import 's10_perfil.dart';
 
 // PANTALLA 7: Detalle del Reclamo (conectada a Supabase)
+// Usa la tabla "reclamos" que ya existe en Supabase (campos: codigo_reclamo,
+// titulo, categoria, descripcion, ubicacion_referencia, estado, fecha_registro...).
 // - Si recibe un reclamoId (desde la lista, ventana 5) muestra ese reclamo.
 // - Si no recibe nada (por ejemplo, desde el menú), muestra el reclamo más reciente.
 class DetallesScreen extends StatefulWidget {
-  final int? reclamoId;
+  final Object? reclamoId;
 
   const DetallesScreen({super.key, this.reclamoId});
 
@@ -52,21 +54,32 @@ class _DetallesScreenState extends State<DetallesScreen> {
             .eq('id', widget.reclamoId!)
             .maybeSingle();
       } else {
-        reclamo = await _supabase
-            .from('reclamos')
-            .select()
-            .order('created_at', ascending: false)
-            .limit(1)
-            .maybeSingle();
+        // Sin id: traemos los reclamos y nos quedamos con el más reciente
+        final filas = List<Map<String, dynamic>>.from(
+          await _supabase.from('reclamos').select(),
+        );
+        filas.sort((a, b) {
+          final fa = _fecha(_fechaDe(a)) ?? DateTime(2000);
+          final fb = _fecha(_fechaDe(b)) ?? DateTime(2000);
+          return fb.compareTo(fa);
+        });
+        reclamo = filas.isEmpty ? null : filas.first;
       }
 
+      // El historial es opcional: si la tabla aún no existe, no rompe la ventana
       List<Map<String, dynamic>> historial = [];
       if (reclamo != null) {
-        historial = await _supabase
-            .from('historial_estados')
-            .select()
-            .eq('reclamo_id', reclamo['id'])
-            .order('created_at', ascending: true);
+        try {
+          historial = List<Map<String, dynamic>>.from(
+            await _supabase
+                .from('historial_estados')
+                .select()
+                .eq('reclamo_id', reclamo['id'].toString())
+                .order('created_at', ascending: true),
+          );
+        } catch (e) {
+          debugPrint('Historial no disponible: $e');
+        }
       }
 
       if (!mounted) return;
@@ -102,11 +115,22 @@ class _DetallesScreenState extends State<DetallesScreen> {
     return '${_formatoFecha(valor)} ${_dosDigitos(f.hour)}:${_dosDigitos(f.minute)}';
   }
 
-  // Ejemplo: #RM-20261025-01
+  // Devuelve la fecha del reclamo (fecha_registro; si no, created_at)
+  dynamic _fechaDe(Map<String, dynamic> r) => r['fecha_registro'] ?? r['created_at'];
+
+  // Devuelve la ubicación (ubicacion_referencia; si no, direccion)
+  String _ubicacionDe(Map<String, dynamic> r) =>
+      (r['ubicacion_referencia'] ?? r['direccion'] ?? 'No indicada').toString();
+
+  // Usa codigo_reclamo si existe; si no, arma uno. Ejemplo: #RM-20261025-01
   String _codigoReclamo(Map<String, dynamic> r) {
-    final f = _fecha(r['created_at']) ?? DateTime.now();
+    final codigo = r['codigo_reclamo']?.toString();
+    if (codigo != null && codigo.isNotEmpty) return codigo;
+    final f = _fecha(_fechaDe(r)) ?? DateTime.now();
     final fecha = '${f.year}${_dosDigitos(f.month)}${_dosDigitos(f.day)}';
-    return '#RM-$fecha-${_dosDigitos(r['id'] as int)}';
+    final id = r['id'].toString();
+    final corto = id.length > 6 ? id.substring(0, 6).toUpperCase() : id.padLeft(2, '0');
+    return '#RM-$fecha-$corto';
   }
 
   Color _colorFondoEstado(String estado) {
@@ -114,11 +138,12 @@ class _DetallesScreenState extends State<DetallesScreen> {
       case 'en proceso':
       case 'en atención':
         return const Color(0xFFBBDEFB);
+      case 'atendido':
       case 'solucionado':
         return const Color(0xFFC8E6C9);
-      case 'derivado':
-        return const Color(0xFFE1BEE7);
-      default: // Registrado
+      case 'rechazado':
+        return const Color(0xFFFFCDD2);
+      default: // pendiente / registrado
         return const Color(0xFFFFE082);
     }
   }
@@ -128,10 +153,11 @@ class _DetallesScreenState extends State<DetallesScreen> {
       case 'en proceso':
       case 'en atención':
         return const Color(0xFF0D47A1);
+      case 'atendido':
       case 'solucionado':
         return const Color(0xFF1B5E20);
-      case 'derivado':
-        return const Color(0xFF4A148C);
+      case 'rechazado':
+        return const Color(0xFFB71C1C);
       default:
         return const Color(0xFF5D4037);
     }
@@ -154,7 +180,7 @@ class _DetallesScreenState extends State<DetallesScreen> {
         destino = const FiltrosScreen();
         break;
       case 's8':
-        destino = ActualizarScreen(reclamoId: _reclamo?['id'] as int?);
+        destino = ActualizarScreen(reclamoId: _reclamo?['id']);
         break;
       case 's9':
         destino = const NotificacionesScreen();
@@ -177,7 +203,7 @@ class _DetallesScreenState extends State<DetallesScreen> {
     final actualizado = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => ActualizarScreen(reclamoId: _reclamo!['id'] as int),
+        builder: (_) => ActualizarScreen(reclamoId: _reclamo!['id']),
       ),
     );
     // Si en la ventana 8 se guardó un cambio, recargamos el detalle
@@ -254,7 +280,7 @@ class _DetallesScreenState extends State<DetallesScreen> {
     }
 
     final r = _reclamo!;
-    final estado = (r['estado'] ?? 'Registrado').toString();
+    final estado = (r['estado'] ?? 'Pendiente').toString();
 
     return RefreshIndicator(
       onRefresh: _cargarDatos,
@@ -302,14 +328,14 @@ class _DetallesScreenState extends State<DetallesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _tituloSeccion('INFORMACIÓN GENERAL'),
-                  Text('Fecha de Registro: ${_formatoFecha(r['created_at'])}',
+                  Text('Fecha de Registro: ${_formatoFecha(_fechaDe(r))}',
                       style: const TextStyle(fontSize: 14)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
-                          'Ubicación: ${r['direccion'] ?? 'No indicada'}',
+                          'Ubicación: ${_ubicacionDe(r)}',
                           style: const TextStyle(fontSize: 14),
                         ),
                       ),
@@ -405,7 +431,7 @@ class _DetallesScreenState extends State<DetallesScreen> {
     if (_historial.isEmpty) {
       return [
         _filaHistorial(
-          '${_formatoFecha(r['created_at'])} - Registrado',
+          '${_formatoFecha(_fechaDe(r))} - ${r['estado'] ?? 'Pendiente'}',
           null,
         ),
       ];
